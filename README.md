@@ -20,12 +20,9 @@ devtools::install_github("osorensen/gainr")
 Example
 -------
 
-This is a basic example which shows you how to solve a common problem:
+This example uses the diamonds dataset in the ggplot2 package to create a classification model. The goal is to predict whether a diamonds is more or less than 1 carat
 
 ``` r
-# This example uses the diamonds dataset in the ggplot2 package to create a
-# classification model. The goal is to predict whether a diamonds is more or
-# less than 1 carat
 library(dplyr)
 library(ggplot2)
 # Splitting into a training and test set
@@ -120,12 +117,3 @@ df2 %>% filter(cume.obs <= 100)
 #> # ... with 4 more variables: cume.lift <dbl>, mean.prediction <dbl>,
 #> #   min.prediction <dbl>, max.prediction <dbl>
 ```
-
-We can now also use `ggplot2` to visualize the aspects of the gain chart that we are interested in.
-
-``` r
-ggplot(df2, aes(x = depth, y = mean.resp)) + 
-  geom_line()
-```
-
-![](README-unnamed-chunk-5-1.png)
