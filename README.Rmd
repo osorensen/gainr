@@ -79,3 +79,4 @@ Using the gains package, we are still able to keep only the topmost rows of the 
 df2 %>% filter(cume.obs <= 100)
 ```
 
+

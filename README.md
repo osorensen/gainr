@@ -120,3 +120,12 @@ df2 %>% filter(cume.obs <= 100)
 #> # ... with 4 more variables: cume.lift <dbl>, mean.prediction <dbl>,
 #> #   min.prediction <dbl>, max.prediction <dbl>
 ```
+
+We can now also use `ggplot2` to visualize the aspects of the gain chart that we are interested in.
+
+``` r
+ggplot(df2, aes(x = depth, y = mean.resp)) + 
+  geom_line()
+```
+
+![](README-unnamed-chunk-5-1.png)
