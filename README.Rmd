@@ -29,12 +29,9 @@ devtools::install_github("osorensen/gainr")
 
 ## Example
 
-This is a basic example which shows you how to solve a common problem:
+This example uses the diamonds dataset in the ggplot2 package to create a classification model. The goal is to predict whether a diamonds is more or less than 1 carat
 
 ```{r example_1, message=FALSE, warning=FALSE}
-# This example uses the diamonds dataset in the ggplot2 package to create a
-# classification model. The goal is to predict whether a diamonds is more or
-# less than 1 carat
 library(dplyr)
 library(ggplot2)
 # Splitting into a training and test set
