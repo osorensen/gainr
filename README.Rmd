@@ -1,0 +1,81 @@
+---
+output: github_document
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, echo = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "README-"
+)
+```
+
+# gainr
+
+The goal of gainr is to create gain charts for use in evaluating classification models on large datasets. In applications with a large number of subjecs, one is often only interested in the subjects which are among the ones with the highest predicted probability. These may be the targets of, e.g., retention efforts or direct marketing. With large datasets, the number of groups used in the gain charts may be in the hundreds or more, and such gain charts may be hard to visualize using the gains package. gainr extends gains by converting its returned object to a tibble, which allows downstream use of the gain chart, e.g., plotting, or exporting to csv.
+
+All underlying computations in gainr are done using the [gains](https://cran.r-project.org/web/packages/gains/index.html) package, which is available on CRAN.
+
+## Installation
+
+You can install gainr from github with:
+
+```{r gh-installation, eval = FALSE}
+# install.packages("devtools")
+devtools::install_github("osorensen/gainr")
+```
+
+## Example
+
+This is a basic example which shows you how to solve a common problem:
+
+```{r example_1, message=FALSE, warning=FALSE}
+# This example uses the diamonds dataset in the ggplot2 package to create a
+# classification model. The goal is to predict whether a diamonds is more or
+# less than 1 carat
+library(dplyr)
+library(ggplot2)
+# Splitting into a training and test set
+train_inds <- sample(floor(nrow(diamonds)/2))
+test_inds <- setdiff(1:nrow(diamonds), train_inds)
+
+training_data <- diamonds %>% 
+  slice(train_inds) %>% 
+  mutate(label = (carat > 1))
+
+test_data <- diamonds %>% 
+  slice(test_inds) %>% 
+  mutate(label = (carat > 1))
+```
+
+Training a logistic regression model on the training set, and predicting on the test set.
+```{r example_2}
+log_model <- glm(label ~ cut + color + clarity + depth + table, 
+                 family = binomial(), data = training_data)
+
+# Now predict on the test set
+predictions <- predict(log_model, newdata = test_data, type = "response")
+```
+
+Finally create a gain chart. The gain chart df1 has 10 groups, with about 2700 observations in each
+```{r}
+library(gainr)
+df1 <- get_gain_chart(actual = test_data$label, predicted = predictions)
+df1
+```
+
+If we instead want to focus only on the subject with the highest predicted probabilities, we might set the groups argument to, say 3000. 
+```{r}
+df2 <- get_gain_chart(actual = test_data$label, predicted = predictions,
+                      groups = 3000)
+df2
+```
+
+Using the gains package, we are still able to keep only the topmost rows of the gain chart. If we want to share the gain chart for the top-100 rows, we might use the basic functions of dplyr, since `df2` is a tibble.
+
+```{r}
+df2 %>% filter(cume.obs <= 100)
+```
+
