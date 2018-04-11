@@ -6,8 +6,12 @@ Author: Oystein Sorensen
 Maintainer: Oystein Sorensen <oystein.sorensen.1985@gmail.com>
 Description: The `gainr` package produces gain charts, which are useful tools for evaluating the performance of prediction models, particularly within customer analytics. `gainr` extends the `gains` package by returning a tibble, which can be used downstream for plotting and analysis. `gainr` also lets the user decide the number of rows to return.
 Imports: gains (>= 1.2), dplyr (>= 0.7.4)
-Suggests: ggplot2 (>= 2.2.1)
+Suggests: ggplot2 (>= 2.2.1),
+    AppliedPredictiveModeling (>= 1.1-6)
+    knitr,
+    rmarkdown
 License: GPL-2
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 6.0.1
+VignetteBuilder: knitr
