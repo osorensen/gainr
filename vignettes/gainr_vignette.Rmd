@@ -1,0 +1,188 @@
+---
+title: "gains: An R Package for Flexible Gain Charts"
+author: "Oystein Sorensen"
+date: "`r Sys.Date()`"
+output:
+  rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+`gainr` is an add-on to the `gains` package, which converts the list returned by `gains` to a dataframe (tibble), which makes it easier to filter the rows of the gain chart, create customer plots using, e.g., `ggplot2`, and saving the gain chart to csv/Excel. This vignette introduces gain charts with a simple example, and then shows the functionality of `gainr`.
+
+
+## Gain Charts for Evaluating Classification Models
+
+### Example Data
+We will use the German credit data for illustration purposes. This data set is available through the `caret` package. The categorical feature we wish to predict is `Class`, which has the value `Bad` or `Good`, depending on the customer's credit rating. We load the dataset, convert it to a dataframe (tibble). There are 1000 observations of 62 variables. 
+
+```{r, message=FALSE}
+library(dplyr)
+library(tibble)
+library(caret)
+data("GermanCredit")
+# Convert to tibble and set the target column first
+GermanCredit <- GermanCredit %>% 
+  as_tibble() %>% 
+  select(Class, everything())
+
+# Showing the first few rows and columns
+GermanCredit[1:6, 1:6]
+
+# Printing the dimension
+dim(GermanCredit)
+```
+
+Among the customers in the dataset, there are 300 with Bad credit score and 700 with good credit score.
+```{r}
+GermanCredit %>% 
+  group_by(Class) %>% 
+  count()
+```
+
+### Recoding the Class Label
+Our goal is to predict the class label. Let us recode the classes into a label which shows whether the customer has a Bad credit score or not. This makes it easier to work with classification models.
+
+```{r}
+GermanCredit <- GermanCredit %>% 
+  mutate(Label = if_else(Class == "Bad", 1, 0)) %>% 
+  select(-Class)
+```
+
+### Train and Test Set
+Next, we split the data into a training and a test set, putting 50 % in each.
+```{r}
+train_inds <- sample(x = nrow(GermanCredit), size = floor(nrow(GermanCredit) / 2))
+train <- GermanCredit %>% slice(train_inds)
+test <- GermanCredit %>% slice(setdiff(1:nrow(GermanCredit), train_inds))
+```
+
+### Logistic Lasso Model
+Next, we create a logistic regression model on the training data set. Because there is a relatively large number of variables, we use L1 regularization (lasso) through the `glmnet` package. The `glmnetUtils` package provides a formula interface. We do 10-fold on the training set, and the plot below shows the cross-validation curve.
+
+```{r, message=FALSE, warning=FALSE}
+set.seed(10)
+library(glmnet)
+library(glmnetUtils)
+log_mod <- cv.glmnet(Label ~ ., data = train)
+```
+
+We tidy the model object using `broom`, and plot the cross-validated loss using `ggplot2`. Thanks to  [this](http://varianceexplained.org/broom-gallery/snippets/broom-glmnet.html) article!
+
+```{r}
+library(ggplot2)
+library(broom)
+
+tidied_cv <- tidy(log_mod)
+glance_cv <- glance(log_mod)
+
+ggplot(tidied_cv, aes(lambda, estimate)) + geom_line(color = "red") +
+    geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = .2) +
+    scale_x_log10() +
+    geom_vline(xintercept = glance_cv$lambda.min) +
+    geom_vline(xintercept = glance_cv$lambda.1se, lty = 2)
+```
+
+
+### Prediction on Test Set
+Finally, we test the model's performance on the test dataset. We use the regularization parameter `lambda.min`, corresponding to the bottom of the cross-validated loss on the training data.
+```{r}
+evaluation <- test %>% 
+  transmute(
+    Label = Label,
+    Prediction = predict(log_mod, newdata = ., s = "lambda.min")
+    )
+
+evaluation
+```
+
+### Gain Charts and Test Set
+Finally, we want to know how good this model is. In particular, it is interesting to ask the following question
+
+- Among the top-X % who are predicted to have a bad credit behavior, how many are truly bad (True Positives), and how many are actually good (True Positives)?
+
+A gain chart is a good tool for investigating this, and the `gains` package does all the necessary calculations for us. In the output table, each customer in the test set is sorted according to the predicted probability, and put in a bin. The default is 10 bins. 
+
+Let us go through the table below, column-by-column:
+
+| Column | Description |
+| ---------- | -------------------------------------------------- |
+|**Depth of File** | This is the size of the bin, in percent. In this case we have deciles. |
+| **N** | How many customers fall into this category? In a business setting, we might be interested in the monthly number of customers in each category. |
+| **Cume N** | How many customers are in this category or higher.|
+| **Mean Resp**| Mean response rate, i.e., what percentage of customers in this bin did actually have bad credit behavior?|
+| **Cume Mean Resp** | Mean response rate in this bin and all the bins above.|
+| **Cume Pct of Total Resp** | What percentage of all customers with bad credit behavoir fell into this bin or higher? |
+| **Lift Index** | How good is this model compared to random guessing, with a probability equal to the average? 199 in the top bin means that the model is about twice as good (199 %) as this baseline. |
+| **Cume Lift** | Cumulative lift, i.e., the lift for the bin and all the above. |
+| **Mean Model Score** | The average predicted probability in the bin. |
+
+```{r}
+library(gains)
+gains(actual = evaluation$Label, predicted = evaluation$Prediction)
+```
+
+### Customizing the Gain Charts
+The gain chart above is very neat, and can give great insights. For example, if we want to stop giving loans to the top-10 % of customers, we expect that 62 % of these will actually be bad customers, while the remaining 38 % have good credit behavior, and hence represent lost business opportunities.
+
+Imagine that we now want to be stricter, and rather than having 10 bins, we want 100 bins. This can be adjusted with the `groups` argument to the `gains` function.
+
+```{r}
+gains(actual = evaluation$Label, predicted = evaluation$Prediction, groups = 100)
+```
+
+As you see, the gains function prints out all 100 rows. But what if we are only interested in the top 50 customers. The ones in the lower parts of the table are not in the risk zone, and in many cases these are not very interesting to target. Reducing the number of printed rows turns out to be tricky, because gains returns a `list` of class `gains`. When the `gains()` function is called, as in the code chunk above, the `print.gains()` function prints the results to the console.
+
+
+```{r}
+gains_object <- gains(actual = evaluation$Label, predicted = evaluation$Prediction, groups = 100)
+c(class(gains_object), typeof(gains_object))
+```
+
+In applications with really big data, one might have a group size in the order of thousands, and a corresponding number of rows written to the console when the `gains()` function is called.
+Hence, in many cases it would be useful to save the gain chart as a dataframe. This dataframe can then be filtered, one can create arbitrary plot, or export it to csv in order to share it with colleagues who are not R users.
+
+### Gain Chart as a dataframe
+The `gainr` package provides an interface to the `gains` package, but returns a dataframe. We illustrate its use her for the example above. Its only function is `get_gain_chart`, and it takes exactly the same arguments as the `gainr` function.
+
+```{r}
+library(gainr)
+gainr_df <- get_gain_chart(actual = evaluation$Label, predicted = evaluation$Prediction, groups = 100)
+gainr_df
+```
+
+#### Filtering the Gain Chart
+If we want to see at most 30 customers, we simply filter the resulting dataframe.
+```{r}
+gainr_df %>% filter(cume.obs <= 30)
+```
+
+
+#### Visualizing the Gain Chart Using ggplot2
+If we want to use `ggplot2` to create plots, we can do that with the dataframe returned by `get_gain_chart()`.
+
+```{r}
+gainr_df <- get_gain_chart(actual = evaluation$Label, predicted = evaluation$Prediction, groups = 10)
+ggplot(gainr_df, aes(x = depth, y = mean.resp)) + 
+  geom_line() +
+  xlab("Mean response") +
+  ylab("Percentile")
+```
+
+#### Saving the Gain Chart
+Since the gain chart returned by `get_gain_chart` is a dataframe, it is also easy to save it to a csv file, say, in order to share with colleagues who do not use R.
+
+```{r, eval=FALSE}
+library(readr)
+write_delim(gainr_df, path = "path-to-file")
+```
+
