@@ -16,7 +16,7 @@ knitr::opts_chunk$set(
 
 The goal of gainr is to create gain charts for use in evaluating classification models on large datasets. In applications with a large number of subjecs, one is often only interested in the subjects which are among the ones with the highest predicted probability. These may be the targets of, e.g., retention efforts or direct marketing. With large datasets, the number of groups used in the gain charts may be in the hundreds or more, and such gain charts may be hard to visualize using the gains package. gainr extends gains by converting its returned object to a tibble, which allows downstream use of the gain chart, e.g., plotting, or exporting to csv.
 
-All underlying computations in gainr are done using the [gains](https://cran.r-project.org/web/packages/gains/index.html) package, which is available on CRAN.
+All underlying computations in gainr are done using the [gains](https://CRAN.R-project.org/package=gains) package, which is available on CRAN.
 
 ## Installation
 
