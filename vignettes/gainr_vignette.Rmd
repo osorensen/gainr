@@ -140,7 +140,7 @@ Imagine that we now want to be stricter, and rather than having 10 bins, we want
 gains(actual = evaluation$Label, predicted = evaluation$Prediction, groups = 100)
 ```
 
-As you see, the gains function prints out all 100 rows. But what if we are only interested in the top 50 customers. The ones in the lower parts of the table are not in the risk zone, and in many cases these are not very interesting to target. Reducing the number of printed rows turns out to be tricky, because gains returns a `list` of class `gains`. When the `gains()` function is called, as in the code chunk above, the `print.gains()` function prints the results to the console.
+As you see, the gains function prints out all 100 rows. But what if we are only interested in the top 50 customers, or the top 5 bins? The ones in the lower parts of the table are not in the risk zone, and in many cases these are not very interesting to target. Reducing the number of printed rows turns out to be tricky, because gains returns a `list` of class `gains`. When the `gains()` function is called, as in the code chunk above, the `print.gains()` function prints the results to the console.
 
 
 ```{r}

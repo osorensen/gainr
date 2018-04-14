@@ -45,6 +45,8 @@
 #' # is a tibble.
 #' df_top <- df2 %>% filter(cume.obs <= 100)
 get_gain_chart <- function(actual, predicted, ...){
+  if(length(actual) != length(predicted)) stop("actual and predicted must have the same length!")
+
   if(!is.numeric(actual)){
     message("Converting the vector of actuals to numeric")
     actual <- as.numeric(actual)
